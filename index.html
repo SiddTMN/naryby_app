@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>naryby_app</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <link rel="stylesheet" href="./styles/style.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="top-bar">
+        <button id="addSpotBtn" class="action-btn primary" type="button">+ Add spot</button>
+        <button id="myLocationBtn" class="action-btn" type="button">My location</button>
+        <button id="exportBtn" class="action-btn" type="button">Export JSON</button>
+        <button id="importBtn" class="action-btn" type="button">Import JSON</button>
+        <input id="importInput" type="file" accept=".json,application/json" hidden />
+      </header>
+
+      <main id="map" aria-label="Fishing spots map"></main>
+
+      <aside id="spotPanel" class="spot-panel" aria-label="Fishing spots list">
+        <button id="panelToggleBtn" class="panel-toggle" type="button" aria-expanded="false">
+          Spots
+        </button>
+        <div class="panel-content">
+          <h2 class="panel-title">Saved spots</h2>
+          <ul id="spotList" class="spot-list"></ul>
+        </div>
+      </aside>
+    </div>
+
+    <dialog id="spotDialog" class="spot-dialog">
+      <form id="spotForm" class="spot-form" method="dialog">
+        <h2 class="form-title">Add fishing spot</h2>
+        <p id="spotCoordinates" class="coordinates"></p>
+
+        <label>
+          Name *
+          <input id="spotName" name="name" type="text" required maxlength="60" />
+        </label>
+
+        <label>
+          Water type
+          <select id="waterType" name="waterType">
+            <option value="river">river</option>
+            <option value="lake">lake</option>
+            <option value="pond">pond</option>
+            <option value="canal">canal</option>
+            <option value="other">other</option>
+          </select>
+        </label>
+
+        <label>
+          Fish species
+          <input id="fishSpecies" name="fishSpecies" type="text" maxlength="120" />
+        </label>
+
+        <label>
+          Notes
+          <textarea id="notes" name="notes" rows="3" maxlength="300"></textarea>
+        </label>
+
+        <label>
+          Author
+          <select id="author" name="author">
+            <option value="Łukasz">Łukasz</option>
+            <option value="User2">User2</option>
+            <option value="User3">User3</option>
+          </select>
+        </label>
+
+        <div class="form-actions">
+          <button id="cancelSpotBtn" type="button" class="action-btn">Cancel</button>
+          <button type="submit" class="action-btn primary">Save spot</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
