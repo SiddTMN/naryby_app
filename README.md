@@ -1,27 +1,42 @@
-# naryby_app
+# Na Ryby
 
-Mobile-first web app for marking fishing spots in Opolskie Voivodeship (Poland).
+Mobilna aplikacja webowa dla wędkarza: mapa miejsc, lokalny dziennik wypraw i fundament pod przyszły kalendarz oraz album.
 
-## Tech
+## Założenia
 
-- HTML
-- CSS
-- Vanilla JavaScript (ES modules)
-- Leaflet + OpenStreetMap
-- `localStorage` for persistence
+- działa jako statyczna strona na GitHub Pages,
+- nie wymaga backendu ani systemu kont,
+- zapisuje dane lokalnie w przeglądarce przez `localStorage`,
+- pozwala eksportować i importować kopię danych w JSON.
 
-## Features
+## Funkcje
 
-- Fullscreen interactive map centered on Opolskie
-- Tap map to add fishing spots with details
-- Marker popup with full spot info and delete action
-- Bottom sliding panel listing saved spots
-- Geolocation button (`My location`)
-- Export spots to JSON file
-- Import spots from JSON file
-- Auto-load saved spots from `localStorage` at startup
+- pełnoekranowa mapa Leaflet/OpenStreetMap wycentrowana na województwie opolskim,
+- dodawanie wielu punktów na mapie bez kasowania poprzednich,
+- lista zapisanych miejsc w dolnym panelu,
+- popup markera ze szczegółami miejsca,
+- lokalny dziennik wpisów przypisanych do wybranego punktu,
+- usuwanie punktu razem z powiązanymi wpisami,
+- geolokalizacja,
+- eksport i import danych aplikacji.
 
-## Project structure
+## Model danych
+
+Dane są zapisywane pod kluczem `naryby_app_data` i mają strukturę przygotowaną pod rozwój:
+
+```json
+{
+  "version": 1,
+  "spots": [],
+  "journal": [],
+  "albums": [],
+  "calendar": []
+}
+```
+
+Starsze dane zapisane jako sama lista punktów pod `naryby_app_spots` są automatycznie migrowane przy starcie.
+
+## Struktura projektu
 
 ```text
 index.html
@@ -32,20 +47,16 @@ src/storage.js
 README.md
 ```
 
-## Run locally
+## Uruchomienie lokalne
 
-Because this app uses ES modules, serve it with a static server.
-
-Example:
+Aplikacja używa modułów ES, więc najlepiej uruchomić ją przez prosty serwer statyczny.
 
 ```bash
-# Python example
 python -m http.server 8000
 ```
 
-Then open: `http://localhost:8000`
+Następnie otwórz `http://localhost:8000`.
 
 ## GitHub Pages
 
-This app is fully static and GitHub Pages compatible.
-Deploy by pushing these files to your Pages-enabled repository (for example, from `main` branch root).
+Aplikacja jest kompatybilna z GitHub Pages. Wystarczy wypchnąć pliki do publicznego repozytorium i włączyć Pages dla katalogu głównego wybranej gałęzi.

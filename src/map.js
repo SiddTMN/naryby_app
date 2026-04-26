@@ -1,7 +1,7 @@
 const OPOLSKIE_CENTER = [50.6751, 17.9213];
 const OPOLSKIE_ZOOM = 9;
 
-export function createMap({ onMapTap, onDeleteSpot, onLocationError }) {
+export function createMap({ onMapTap, onDeleteSpot, onAddJournalEntry, onLocationError }) {
   const map = L.map("map", {
     zoomControl: false,
     preferCanvas: true,
@@ -31,7 +31,7 @@ export function createMap({ onMapTap, onDeleteSpot, onLocationError }) {
 
   map.on("locationerror", (event) => {
     if (typeof onLocationError === "function") {
-      onLocationError(event.message || "Location access failed.");
+      onLocationError(event.message || "Nie udało się pobrać lokalizacji.");
     }
   });
 
@@ -40,24 +40,31 @@ export function createMap({ onMapTap, onDeleteSpot, onLocationError }) {
     if (!popupNode) return;
 
     const deleteButton = popupNode.querySelector(".delete-spot-btn");
-    if (!deleteButton) return;
-
-    deleteButton.addEventListener("click", () => {
+    deleteButton?.addEventListener("click", () => {
       const spotId = deleteButton.getAttribute("data-spot-id");
       if (spotId && typeof onDeleteSpot === "function") {
         onDeleteSpot(spotId);
       }
     });
+
+    const journalButton = popupNode.querySelector(".journal-entry-btn");
+    journalButton?.addEventListener("click", () => {
+      const spotId = journalButton.getAttribute("data-spot-id");
+      if (spotId && typeof onAddJournalEntry === "function") {
+        onAddJournalEntry(spotId);
+      }
+    });
   });
 
   return {
-    renderSpots(spots) {
+    renderSpots(spots, journalEntries = []) {
       markerIndex.forEach((marker) => marker.remove());
       markerIndex.clear();
 
       spots.forEach((spot) => {
+        const entryCount = journalEntries.filter((entry) => entry.spotId === spot.id).length;
         const marker = L.marker([spot.lat, spot.lng]).addTo(map);
-        marker.bindPopup(buildPopupHtml(spot));
+        marker.bindPopup(buildPopupHtml(spot, entryCount));
         markerIndex.set(spot.id, marker);
       });
     },
@@ -83,16 +90,19 @@ export function createMap({ onMapTap, onDeleteSpot, onLocationError }) {
   };
 }
 
-function buildPopupHtml(spot) {
+function buildPopupHtml(spot, entryCount) {
   return `
     <div class="marker-popup">
       <h3>${escapeHtml(spot.name)}</h3>
-      <p><strong>Water:</strong> ${escapeHtml(spot.waterType)}</p>
-      <p><strong>Fish:</strong> ${escapeHtml(spot.fishSpecies || "-")}</p>
-      <p><strong>Notes:</strong> ${escapeHtml(spot.notes || "-")}</p>
-      <p><strong>Author:</strong> ${escapeHtml(spot.author)}</p>
+      <p><strong>Typ wody:</strong> ${escapeHtml(spot.waterType)}</p>
+      <p><strong>Ryby:</strong> ${escapeHtml(spot.fishSpecies || "-")}</p>
+      <p><strong>Notatki:</strong> ${escapeHtml(spot.notes || "-")}</p>
+      <p><strong>Wpisy:</strong> ${entryCount}</p>
+      <button class="journal-entry-btn" type="button" data-spot-id="${escapeHtml(spot.id)}">
+        Dodaj wpis
+      </button>
       <button class="delete-spot-btn" type="button" data-spot-id="${escapeHtml(spot.id)}">
-        Delete
+        Usuń punkt
       </button>
     </div>
   `;

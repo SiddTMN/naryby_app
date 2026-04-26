@@ -1,9 +1,10 @@
 import { createMap } from "./map.js";
-import { buildSpotId, exportSpots, loadSpots, parseImportedSpots, saveSpots } from "./storage.js";
+import { buildId, exportAppData, loadAppData, parseImportedData, saveAppData } from "./storage.js";
 
 const state = {
-  spots: loadSpots(),
+  data: loadAppData(),
   pendingCoords: null,
+  pendingJournalSpotId: null,
 };
 
 const elements = {
@@ -19,18 +20,24 @@ const elements = {
   spotForm: document.getElementById("spotForm"),
   spotCoordinates: document.getElementById("spotCoordinates"),
   cancelSpotBtn: document.getElementById("cancelSpotBtn"),
+  journalDialog: document.getElementById("journalDialog"),
+  journalForm: document.getElementById("journalForm"),
+  journalSpotName: document.getElementById("journalSpotName"),
+  journalDate: document.getElementById("journalDate"),
+  cancelJournalBtn: document.getElementById("cancelJournalBtn"),
 };
 
 const mapApi = createMap({
   onMapTap: openSpotDialogAt,
   onDeleteSpot: deleteSpot,
+  onAddJournalEntry: openJournalDialog,
   onLocationError: (message) => alert(message),
 });
 
 init();
 
 function init() {
-  mapApi.renderSpots(state.spots);
+  mapApi.renderSpots(state.data.spots, state.data.journal);
   renderSpotList();
   bindEvents();
 }
@@ -38,7 +45,7 @@ function init() {
 function bindEvents() {
   elements.addSpotBtn.addEventListener("click", () => {
     const originalText = elements.addSpotBtn.textContent;
-    elements.addSpotBtn.textContent = "Tap map now";
+    elements.addSpotBtn.textContent = "Kliknij mapę";
     window.setTimeout(() => {
       elements.addSpotBtn.textContent = originalText;
     }, 1400);
@@ -49,7 +56,7 @@ function bindEvents() {
   });
 
   elements.exportBtn.addEventListener("click", () => {
-    exportSpots(state.spots);
+    exportAppData(state.data);
   });
 
   elements.importBtn.addEventListener("click", () => {
@@ -62,11 +69,10 @@ function bindEvents() {
 
     try {
       const fileText = await file.text();
-      const imported = parseImportedSpots(fileText);
-      state.spots = imported;
+      state.data = parseImportedData(fileText);
       syncAndRender();
     } catch (error) {
-      alert(`Failed to import JSON: ${error.message}`);
+      alert(`Nie udało się zaimportować JSON: ${error.message}`);
     } finally {
       elements.importInput.value = "";
     }
@@ -79,19 +85,29 @@ function bindEvents() {
   });
 
   elements.spotList.addEventListener("click", (event) => {
-    const button = event.target.closest("button[data-spot-id]");
-    if (!button) return;
-    const spotId = button.getAttribute("data-spot-id");
-    if (spotId) {
-      mapApi.zoomToSpot(spotId);
+    const zoomButton = event.target.closest("button[data-spot-id][data-action='zoom']");
+    if (zoomButton) {
+      mapApi.zoomToSpot(zoomButton.getAttribute("data-spot-id"));
+      return;
+    }
+
+    const journalButton = event.target.closest("button[data-spot-id][data-action='journal']");
+    if (journalButton) {
+      openJournalDialog(journalButton.getAttribute("data-spot-id"));
     }
   });
 
   elements.cancelSpotBtn.addEventListener("click", closeSpotDialog);
+  elements.cancelJournalBtn.addEventListener("click", closeJournalDialog);
 
   elements.spotDialog.addEventListener("cancel", (event) => {
     event.preventDefault();
     closeSpotDialog();
+  });
+
+  elements.journalDialog.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    closeJournalDialog();
   });
 
   elements.spotForm.addEventListener("submit", (event) => {
@@ -103,32 +119,46 @@ function bindEvents() {
     if (!name) return;
 
     const spot = {
-      id: buildSpotId(),
+      id: buildId("spot"),
       name,
-      waterType: String(formData.get("waterType") || "other"),
+      waterType: String(formData.get("waterType") || "Inne"),
       fishSpecies: String(formData.get("fishSpecies") || "").trim(),
       notes: String(formData.get("notes") || "").trim(),
-      author: String(formData.get("author") || "Łukasz"),
       lat: state.pendingCoords.lat,
       lng: state.pendingCoords.lng,
       createdAt: new Date().toISOString(),
     };
 
-    state.spots.push(spot);
+    state.data.spots = [...state.data.spots, spot];
     syncAndRender();
     closeSpotDialog();
+  });
+
+  elements.journalForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (!state.pendingJournalSpotId) return;
+
+    const formData = new FormData(elements.journalForm);
+    const entry = {
+      id: buildId("entry"),
+      spotId: state.pendingJournalSpotId,
+      date: String(formData.get("date") || new Date().toISOString().slice(0, 10)),
+      catchSummary: String(formData.get("catchSummary") || "").trim(),
+      conditions: String(formData.get("conditions") || "").trim(),
+      notes: String(formData.get("notes") || "").trim(),
+      createdAt: new Date().toISOString(),
+    };
+
+    state.data.journal = [...state.data.journal, entry];
+    syncAndRender();
+    closeJournalDialog();
   });
 }
 
 function openSpotDialogAt(coords) {
   state.pendingCoords = coords;
-  elements.spotCoordinates.textContent = `Lat: ${coords.lat.toFixed(5)}, Lng: ${coords.lng.toFixed(5)}`;
+  elements.spotCoordinates.textContent = `Współrzędne: ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`;
   elements.spotForm.reset();
-
-  // This keeps a consistent author default after reset.
-  const authorSelect = elements.spotForm.querySelector("#author");
-  if (authorSelect) authorSelect.value = "Łukasz";
-
   openDialog(elements.spotDialog);
 }
 
@@ -137,39 +167,68 @@ function closeSpotDialog() {
   closeDialog(elements.spotDialog);
 }
 
+function openJournalDialog(spotId) {
+  const spot = state.data.spots.find((item) => item.id === spotId);
+  if (!spot) return;
+
+  state.pendingJournalSpotId = spotId;
+  elements.journalForm.reset();
+  elements.journalDate.value = new Date().toISOString().slice(0, 10);
+  elements.journalSpotName.textContent = spot.name;
+  openDialog(elements.journalDialog);
+}
+
+function closeJournalDialog() {
+  state.pendingJournalSpotId = null;
+  closeDialog(elements.journalDialog);
+}
+
 function deleteSpot(spotId) {
-  const shouldDelete = confirm("Delete this fishing spot?");
+  const shouldDelete = confirm("Usunąć ten punkt i powiązane wpisy z dziennika?");
   if (!shouldDelete) return;
 
-  state.spots = state.spots.filter((spot) => spot.id !== spotId);
+  state.data.spots = state.data.spots.filter((spot) => spot.id !== spotId);
+  state.data.journal = state.data.journal.filter((entry) => entry.spotId !== spotId);
   syncAndRender();
 }
 
 function syncAndRender() {
-  // Single sync point keeps storage and UI always in the same state.
-  saveSpots(state.spots);
-  mapApi.renderSpots(state.spots);
+  saveAppData(state.data);
+  mapApi.renderSpots(state.data.spots, state.data.journal);
   renderSpotList();
 }
 
 function renderSpotList() {
-  if (state.spots.length === 0) {
-    elements.spotList.innerHTML = `<li>No spots yet. Tap the map to add your first spot.</li>`;
+  if (state.data.spots.length === 0) {
+    elements.spotList.innerHTML = `<li class="empty-state">Nie masz jeszcze punktów. Kliknij mapę, żeby dodać pierwsze miejsce.</li>`;
     return;
   }
 
-  elements.spotList.innerHTML = state.spots
-    .map(
-      (spot) => `
-        <li>
-          <button class="spot-item-btn" type="button" data-spot-id="${escapeAttr(spot.id)}">
-            <strong>${escapeHtml(spot.name)}</strong>
-            <span>${escapeHtml(spot.waterType)}</span>
-          </button>
-        </li>
-      `
-    )
-    .join("");
+  elements.spotList.innerHTML = state.data.spots.map(renderSpotItem).join("");
+}
+
+function renderSpotItem(spot) {
+  const entries = state.data.journal
+    .filter((entry) => entry.spotId === spot.id)
+    .sort((a, b) => b.date.localeCompare(a.date));
+  const latestEntry = entries[0];
+
+  return `
+    <li class="spot-item">
+      <button class="spot-item-btn" type="button" data-action="zoom" data-spot-id="${escapeAttr(spot.id)}">
+        <strong>${escapeHtml(spot.name)}</strong>
+        <span>${escapeHtml(spot.waterType)} · wpisy: ${entries.length}</span>
+      </button>
+      ${
+        latestEntry
+          ? `<p class="latest-entry">${escapeHtml(latestEntry.date)}: ${escapeHtml(latestEntry.catchSummary || latestEntry.notes || "Wpis bez opisu")}</p>`
+          : `<p class="latest-entry">Brak wpisów w dzienniku.</p>`
+      }
+      <button class="small-action-btn" type="button" data-action="journal" data-spot-id="${escapeAttr(spot.id)}">
+        Dodaj wpis
+      </button>
+    </li>
+  `;
 }
 
 function escapeHtml(value) {

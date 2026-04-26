@@ -129,14 +129,21 @@ body {
   gap: 8px;
 }
 
+.spot-item {
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  border-radius: 12px;
+  padding: 8px;
+}
+
 .spot-item-btn {
   width: 100%;
   text-align: left;
-  border: 1px solid var(--border);
-  background: var(--surface-soft);
+  border: 0;
+  background: transparent;
   color: var(--text);
-  border-radius: 12px;
-  padding: 10px;
+  border-radius: 8px;
+  padding: 4px;
   min-height: 54px;
   cursor: pointer;
 }
@@ -149,6 +156,18 @@ body {
 .spot-item-btn span {
   color: var(--muted);
   font-size: 0.88rem;
+}
+
+.latest-entry {
+  margin: 0 4px 8px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+
+.empty-state {
+  color: var(--muted);
+  line-height: 1.4;
 }
 
 .spot-dialog {
@@ -218,16 +237,44 @@ body {
   margin: 4px 0;
 }
 
-.delete-spot-btn {
+.delete-spot-btn,
+.journal-entry-btn,
+.small-action-btn {
   margin-top: 10px;
-  border: 0;
+  border: 1px solid transparent;
   border-radius: 10px;
   min-height: 40px;
   width: 100%;
-  background: var(--danger);
-  color: #fff;
   font-weight: 700;
   cursor: pointer;
+}
+
+.journal-entry-btn,
+.small-action-btn {
+  background: var(--accent);
+  color: #fff;
+}
+
+.delete-spot-btn {
+  background: var(--danger);
+  color: #fff;
+}
+
+.small-action-btn {
+  margin: 0;
+  min-height: 36px;
+}
+
+.spot-form input::placeholder {
+  color: #7c8798;
+}
+
+.spot-form textarea {
+  resize: vertical;
+}
+
+.marker-popup button + button {
+  margin-top: 8px;
 }
 
 .leaflet-control-zoom a {
