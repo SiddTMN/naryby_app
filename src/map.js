@@ -1,7 +1,7 @@
 const OPOLSKIE_CENTER = [50.6751, 17.9213];
 const OPOLSKIE_ZOOM = 9;
 
-export function createMap({ onMapTap, onDeleteSpot, onAddJournalEntry, onLocationError }) {
+export function createMap({ onMapTap, onEditSpot, onDeleteSpot, onAddJournalEntry, onLocationError }) {
   const map = L.map("map", {
     zoomControl: false,
     preferCanvas: true,
@@ -54,6 +54,14 @@ export function createMap({ onMapTap, onDeleteSpot, onAddJournalEntry, onLocatio
         onAddJournalEntry(spotId);
       }
     });
+
+    const editButton = popupNode.querySelector(".edit-spot-btn");
+    editButton?.addEventListener("click", () => {
+      const spotId = editButton.getAttribute("data-spot-id");
+      if (spotId && typeof onEditSpot === "function") {
+        onEditSpot(spotId);
+      }
+    });
   });
 
   return {
@@ -100,6 +108,9 @@ function buildPopupHtml(spot, entryCount) {
       <p><strong>Wpisy:</strong> ${entryCount}</p>
       <button class="journal-entry-btn" type="button" data-spot-id="${escapeHtml(spot.id)}">
         Dodaj wpis
+      </button>
+      <button class="edit-spot-btn" type="button" data-spot-id="${escapeHtml(spot.id)}">
+        Edytuj punkt
       </button>
       <button class="delete-spot-btn" type="button" data-spot-id="${escapeHtml(spot.id)}">
         Usuń punkt

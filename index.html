@@ -29,15 +29,20 @@
           Miejsca i dziennik
         </button>
         <div class="panel-content">
-          <h2 class="panel-title">Zapisane miejsca</h2>
+          <div class="panel-tabs" role="tablist" aria-label="Widoki aplikacji">
+            <button id="spotsTabBtn" class="tab-btn active" type="button" data-view="spots">Miejsca</button>
+            <button id="journalTabBtn" class="tab-btn" type="button" data-view="journal">Dziennik</button>
+          </div>
+          <h2 id="panelTitle" class="panel-title">Zapisane miejsca</h2>
           <ul id="spotList" class="spot-list"></ul>
+          <ul id="journalList" class="journal-list" hidden></ul>
         </div>
       </aside>
     </div>
 
     <dialog id="spotDialog" class="spot-dialog">
       <form id="spotForm" class="spot-form" method="dialog">
-        <h2 class="form-title">Dodaj miejsce</h2>
+        <h2 id="spotFormTitle" class="form-title">Dodaj miejsce</h2>
         <p id="spotCoordinates" class="coordinates"></p>
 
         <label>
@@ -75,7 +80,7 @@
 
     <dialog id="journalDialog" class="spot-dialog">
       <form id="journalForm" class="spot-form" method="dialog">
-        <h2 class="form-title">Dodaj wpis</h2>
+        <h2 id="journalFormTitle" class="form-title">Dodaj wpis</h2>
         <p id="journalSpotName" class="coordinates"></p>
 
         <label>

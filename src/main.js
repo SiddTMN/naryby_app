@@ -3,8 +3,11 @@ import { buildId, exportAppData, loadAppData, parseImportedData, saveAppData } f
 
 const state = {
   data: loadAppData(),
+  activeView: "spots",
   pendingCoords: null,
+  editingSpotId: null,
   pendingJournalSpotId: null,
+  editingJournalEntryId: null,
 };
 
 const elements = {
@@ -15,13 +18,19 @@ const elements = {
   importInput: document.getElementById("importInput"),
   spotPanel: document.getElementById("spotPanel"),
   panelToggleBtn: document.getElementById("panelToggleBtn"),
+  spotsTabBtn: document.getElementById("spotsTabBtn"),
+  journalTabBtn: document.getElementById("journalTabBtn"),
+  panelTitle: document.getElementById("panelTitle"),
   spotList: document.getElementById("spotList"),
+  journalList: document.getElementById("journalList"),
   spotDialog: document.getElementById("spotDialog"),
   spotForm: document.getElementById("spotForm"),
+  spotFormTitle: document.getElementById("spotFormTitle"),
   spotCoordinates: document.getElementById("spotCoordinates"),
   cancelSpotBtn: document.getElementById("cancelSpotBtn"),
   journalDialog: document.getElementById("journalDialog"),
   journalForm: document.getElementById("journalForm"),
+  journalFormTitle: document.getElementById("journalFormTitle"),
   journalSpotName: document.getElementById("journalSpotName"),
   journalDate: document.getElementById("journalDate"),
   cancelJournalBtn: document.getElementById("cancelJournalBtn"),
@@ -29,6 +38,7 @@ const elements = {
 
 const mapApi = createMap({
   onMapTap: openSpotDialogAt,
+  onEditSpot: openSpotEditor,
   onDeleteSpot: deleteSpot,
   onAddJournalEntry: openJournalDialog,
   onLocationError: (message) => alert(message),
@@ -39,6 +49,7 @@ init();
 function init() {
   mapApi.renderSpots(state.data.spots, state.data.journal);
   renderSpotList();
+  renderJournalList();
   bindEvents();
 }
 
@@ -84,6 +95,9 @@ function bindEvents() {
     mapApi.invalidateSize();
   });
 
+  elements.spotsTabBtn.addEventListener("click", () => setActiveView("spots"));
+  elements.journalTabBtn.addEventListener("click", () => setActiveView("journal"));
+
   elements.spotList.addEventListener("click", (event) => {
     const zoomButton = event.target.closest("button[data-spot-id][data-action='zoom']");
     if (zoomButton) {
@@ -94,6 +108,38 @@ function bindEvents() {
     const journalButton = event.target.closest("button[data-spot-id][data-action='journal']");
     if (journalButton) {
       openJournalDialog(journalButton.getAttribute("data-spot-id"));
+      return;
+    }
+
+    const editButton = event.target.closest("button[data-spot-id][data-action='edit-spot']");
+    if (editButton) {
+      openSpotEditor(editButton.getAttribute("data-spot-id"));
+      return;
+    }
+
+    const deleteButton = event.target.closest("button[data-spot-id][data-action='delete-spot']");
+    if (deleteButton) {
+      deleteSpot(deleteButton.getAttribute("data-spot-id"));
+    }
+  });
+
+  elements.journalList.addEventListener("click", (event) => {
+    const zoomButton = event.target.closest("button[data-spot-id][data-action='zoom']");
+    if (zoomButton) {
+      setActiveView("spots");
+      mapApi.zoomToSpot(zoomButton.getAttribute("data-spot-id"));
+      return;
+    }
+
+    const editButton = event.target.closest("button[data-entry-id][data-action='edit-entry']");
+    if (editButton) {
+      openJournalEditor(editButton.getAttribute("data-entry-id"));
+      return;
+    }
+
+    const deleteButton = event.target.closest("button[data-entry-id][data-action='delete-entry']");
+    if (deleteButton) {
+      deleteJournalEntry(deleteButton.getAttribute("data-entry-id"));
     }
   });
 
@@ -112,44 +158,68 @@ function bindEvents() {
 
   elements.spotForm.addEventListener("submit", (event) => {
     event.preventDefault();
-    if (!state.pendingCoords) return;
+    if (!state.pendingCoords && !state.editingSpotId) return;
 
     const formData = new FormData(elements.spotForm);
     const name = String(formData.get("name") || "").trim();
     if (!name) return;
 
-    const spot = {
-      id: buildId("spot"),
+    const spotData = {
       name,
       waterType: String(formData.get("waterType") || "Inne"),
       fishSpecies: String(formData.get("fishSpecies") || "").trim(),
       notes: String(formData.get("notes") || "").trim(),
-      lat: state.pendingCoords.lat,
-      lng: state.pendingCoords.lng,
-      createdAt: new Date().toISOString(),
     };
 
-    state.data.spots = [...state.data.spots, spot];
+    if (state.editingSpotId) {
+      state.data.spots = state.data.spots.map((spot) =>
+        spot.id === state.editingSpotId ? { ...spot, ...spotData, updatedAt: new Date().toISOString() } : spot
+      );
+    } else {
+      state.data.spots = [
+        ...state.data.spots,
+        {
+          id: buildId("spot"),
+          ...spotData,
+          lat: state.pendingCoords.lat,
+          lng: state.pendingCoords.lng,
+          createdAt: new Date().toISOString(),
+        },
+      ];
+    }
+
     syncAndRender();
     closeSpotDialog();
   });
 
   elements.journalForm.addEventListener("submit", (event) => {
     event.preventDefault();
-    if (!state.pendingJournalSpotId) return;
+    if (!state.pendingJournalSpotId && !state.editingJournalEntryId) return;
 
     const formData = new FormData(elements.journalForm);
-    const entry = {
-      id: buildId("entry"),
-      spotId: state.pendingJournalSpotId,
+    const entryData = {
       date: String(formData.get("date") || new Date().toISOString().slice(0, 10)),
       catchSummary: String(formData.get("catchSummary") || "").trim(),
       conditions: String(formData.get("conditions") || "").trim(),
       notes: String(formData.get("notes") || "").trim(),
-      createdAt: new Date().toISOString(),
     };
 
-    state.data.journal = [...state.data.journal, entry];
+    if (state.editingJournalEntryId) {
+      state.data.journal = state.data.journal.map((entry) =>
+        entry.id === state.editingJournalEntryId ? { ...entry, ...entryData, updatedAt: new Date().toISOString() } : entry
+      );
+    } else {
+      state.data.journal = [
+        ...state.data.journal,
+        {
+          id: buildId("entry"),
+          spotId: state.pendingJournalSpotId,
+          ...entryData,
+          createdAt: new Date().toISOString(),
+        },
+      ];
+    }
+
     syncAndRender();
     closeJournalDialog();
   });
@@ -157,13 +227,31 @@ function bindEvents() {
 
 function openSpotDialogAt(coords) {
   state.pendingCoords = coords;
+  state.editingSpotId = null;
+  elements.spotFormTitle.textContent = "Dodaj miejsce";
   elements.spotCoordinates.textContent = `Współrzędne: ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`;
   elements.spotForm.reset();
   openDialog(elements.spotDialog);
 }
 
+function openSpotEditor(spotId) {
+  const spot = state.data.spots.find((item) => item.id === spotId);
+  if (!spot) return;
+
+  state.pendingCoords = null;
+  state.editingSpotId = spotId;
+  elements.spotFormTitle.textContent = "Edytuj miejsce";
+  elements.spotCoordinates.textContent = `Współrzędne: ${spot.lat.toFixed(5)}, ${spot.lng.toFixed(5)}`;
+  elements.spotForm.elements.name.value = spot.name;
+  elements.spotForm.elements.waterType.value = spot.waterType;
+  elements.spotForm.elements.fishSpecies.value = spot.fishSpecies || "";
+  elements.spotForm.elements.notes.value = spot.notes || "";
+  openDialog(elements.spotDialog);
+}
+
 function closeSpotDialog() {
   state.pendingCoords = null;
+  state.editingSpotId = null;
   closeDialog(elements.spotDialog);
 }
 
@@ -172,14 +260,34 @@ function openJournalDialog(spotId) {
   if (!spot) return;
 
   state.pendingJournalSpotId = spotId;
+  state.editingJournalEntryId = null;
+  elements.journalFormTitle.textContent = "Dodaj wpis";
   elements.journalForm.reset();
   elements.journalDate.value = new Date().toISOString().slice(0, 10);
   elements.journalSpotName.textContent = spot.name;
   openDialog(elements.journalDialog);
 }
 
+function openJournalEditor(entryId) {
+  const entry = state.data.journal.find((item) => item.id === entryId);
+  if (!entry) return;
+  const spot = state.data.spots.find((item) => item.id === entry.spotId);
+
+  state.pendingJournalSpotId = entry.spotId;
+  state.editingJournalEntryId = entryId;
+  elements.journalFormTitle.textContent = "Edytuj wpis";
+  elements.journalForm.reset();
+  elements.journalSpotName.textContent = spot?.name || "Miejsce usunięte";
+  elements.journalDate.value = entry.date;
+  elements.journalForm.elements.catchSummary.value = entry.catchSummary || "";
+  elements.journalForm.elements.conditions.value = entry.conditions || "";
+  elements.journalForm.elements.notes.value = entry.notes || "";
+  openDialog(elements.journalDialog);
+}
+
 function closeJournalDialog() {
   state.pendingJournalSpotId = null;
+  state.editingJournalEntryId = null;
   closeDialog(elements.journalDialog);
 }
 
@@ -192,10 +300,31 @@ function deleteSpot(spotId) {
   syncAndRender();
 }
 
+function deleteJournalEntry(entryId) {
+  const shouldDelete = confirm("Usunąć ten wpis z dziennika?");
+  if (!shouldDelete) return;
+
+  state.data.journal = state.data.journal.filter((entry) => entry.id !== entryId);
+  syncAndRender();
+}
+
 function syncAndRender() {
   saveAppData(state.data);
   mapApi.renderSpots(state.data.spots, state.data.journal);
   renderSpotList();
+  renderJournalList();
+}
+
+function setActiveView(view) {
+  state.activeView = view;
+  const isJournal = view === "journal";
+  elements.spotsTabBtn.classList.toggle("active", !isJournal);
+  elements.journalTabBtn.classList.toggle("active", isJournal);
+  elements.spotList.hidden = isJournal;
+  elements.journalList.hidden = !isJournal;
+  elements.panelTitle.textContent = isJournal ? "Dziennik wypraw" : "Zapisane miejsca";
+  renderSpotList();
+  renderJournalList();
 }
 
 function renderSpotList() {
@@ -227,6 +356,57 @@ function renderSpotItem(spot) {
       <button class="small-action-btn" type="button" data-action="journal" data-spot-id="${escapeAttr(spot.id)}">
         Dodaj wpis
       </button>
+      <div class="item-actions">
+        <button class="text-action-btn" type="button" data-action="edit-spot" data-spot-id="${escapeAttr(spot.id)}">
+          Edytuj
+        </button>
+        <button class="text-action-btn danger" type="button" data-action="delete-spot" data-spot-id="${escapeAttr(spot.id)}">
+          Usuń
+        </button>
+      </div>
+    </li>
+  `;
+}
+
+function renderJournalList() {
+  if (state.data.journal.length === 0) {
+    elements.journalList.innerHTML = `<li class="empty-state">Dziennik jest pusty. Dodaj wpis z poziomu punktu na mapie lub listy miejsc.</li>`;
+    return;
+  }
+
+  const entries = [...state.data.journal].sort((a, b) => {
+    const dateCompare = b.date.localeCompare(a.date);
+    return dateCompare || b.createdAt.localeCompare(a.createdAt);
+  });
+
+  elements.journalList.innerHTML = entries.map(renderJournalItem).join("");
+}
+
+function renderJournalItem(entry) {
+  const spot = state.data.spots.find((item) => item.id === entry.spotId);
+  const summary = entry.catchSummary || entry.notes || "Wpis bez opisu";
+
+  return `
+    <li class="journal-item">
+      <div class="journal-item-head">
+        <strong>${escapeHtml(entry.date)}</strong>
+        <span>${escapeHtml(spot?.name || "Miejsce usunięte")}</span>
+      </div>
+      <p>${escapeHtml(summary)}</p>
+      ${entry.conditions ? `<p class="latest-entry">Warunki: ${escapeHtml(entry.conditions)}</p>` : ""}
+      <div class="item-actions">
+        ${
+          spot
+            ? `<button class="text-action-btn" type="button" data-action="zoom" data-spot-id="${escapeAttr(spot.id)}">Pokaż na mapie</button>`
+            : ""
+        }
+        <button class="text-action-btn" type="button" data-action="edit-entry" data-entry-id="${escapeAttr(entry.id)}">
+          Edytuj
+        </button>
+        <button class="text-action-btn danger" type="button" data-action="delete-entry" data-entry-id="${escapeAttr(entry.id)}">
+          Usuń
+        </button>
+      </div>
     </li>
   `;
 }
