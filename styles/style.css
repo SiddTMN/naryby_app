@@ -132,22 +132,19 @@ body {
 }
 
 .center-readout {
-  top: calc(50% + 50px);
+  bottom: 58px;
+  top: auto;
   display: grid;
   gap: 2px;
-  min-width: 186px;
-  padding: 7px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.72);
-  border-radius: 8px;
-  background: rgba(15, 28, 42, 0.56);
-  box-shadow: 0 6px 18px rgba(16, 37, 64, 0.16);
-  color: #fff;
+  min-width: 180px;
+  padding: 0 10px;
+  color: rgba(25, 34, 53, 0.86);
   text-align: center;
-  backdrop-filter: blur(8px);
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.88);
 }
 
 .readout-label {
-  color: rgba(255, 255, 255, 0.74);
+  color: rgba(25, 34, 53, 0.62);
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0;
