@@ -24,6 +24,18 @@
 
       <main id="map" aria-label="Mapa miejsc wędkarskich"></main>
 
+      <div class="map-hud" aria-live="polite">
+        <div class="center-target" aria-hidden="true">
+          <span class="target-line horizontal"></span>
+          <span class="target-line vertical"></span>
+          <span class="target-ring"></span>
+        </div>
+        <div class="center-readout" aria-label="Współrzędne środka mapy">
+          <span class="readout-label">Środek mapy</span>
+          <strong id="centerCoordinates">--, --</strong>
+        </div>
+      </div>
+
       <aside id="spotPanel" class="spot-panel" aria-label="Lista miejsc wędkarskich">
         <button id="panelToggleBtn" class="panel-toggle" type="button" aria-expanded="false">
           Miejsca i dziennik

@@ -18,7 +18,14 @@ export function createMap({ onMapTap, onEditSpot, onDeleteSpot, onAddJournalEntr
     attribution: "&copy; OpenStreetMap contributors",
   }).addTo(map);
 
+  const centerCoordinates = document.getElementById("centerCoordinates");
   const markerIndex = new Map();
+  const updateCenterReadout = () => {
+    if (!centerCoordinates) return;
+
+    const center = map.getCenter();
+    centerCoordinates.textContent = formatCoordinates(center.lat, center.lng);
+  };
 
   map.on("click", (event) => {
     if (typeof onMapTap === "function") {
@@ -64,6 +71,9 @@ export function createMap({ onMapTap, onEditSpot, onDeleteSpot, onAddJournalEntr
     });
   });
 
+  map.on("move zoom locationfound", updateCenterReadout);
+  updateCenterReadout();
+
   return {
     renderSpots(spots, journalEntries = []) {
       markerIndex.forEach((marker) => marker.remove());
@@ -96,6 +106,12 @@ export function createMap({ onMapTap, onEditSpot, onDeleteSpot, onAddJournalEntr
       map.invalidateSize();
     },
   };
+}
+
+function formatCoordinates(lat, lng) {
+  const latDirection = lat >= 0 ? "N" : "S";
+  const lngDirection = lng >= 0 ? "E" : "W";
+  return `${Math.abs(lat).toFixed(5)}° ${latDirection}, ${Math.abs(lng).toFixed(5)}° ${lngDirection}`;
 }
 
 function buildPopupHtml(spot, entryCount) {
